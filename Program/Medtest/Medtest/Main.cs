@@ -39,14 +39,6 @@ namespace Medtest
         {
             panel_authorization.Location = new Point(ActiveForm.Width/2 - panel_authorization.Width/2,
                                                      ActiveForm.Height/2 - panel_authorization.Height/2);
-
-            string message = System.Net.Dns.GetHostByName(System.Net.Dns.GetHostName()).AddressList[0] + "\n0";
-            sendBackgroundWorker.RunWorkerAsync(
-                new SendArgument()
-                    {
-                        Hostname = Properties.Settings.Default.IP_server,
-                        Message = message
-                    });
         }
 
         private void sendBackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
@@ -139,10 +131,10 @@ namespace Medtest
         //Сохранение настроек
         private void button_settings_save_Click(object sender, EventArgs e)
         {
-            panel_settings.Visible = false;
-            panel_authorization.Visible = true;
             Properties.Settings.Default.IP_server = textBox_ip_server_settings.Text;
             Properties.Settings.Default.Save();
+            panel_settings.Visible = false;
+            panel_authorization.Visible = true;
         }
 
         //Проверка нового адреса
@@ -160,24 +152,49 @@ namespace Medtest
         //кнопка далее
         private void button_next_Click(object sender, EventArgs e)
         {
-            string message = System.Net.Dns.GetHostByName(System.Net.Dns.GetHostName()).AddressList[0] + "\n1\n" +
-                             textBox_surname.Text + "\n" + textBox_first_name.Text + "\n" + textBox_last_name.Text +
-                             "\n" + textBox_password.Text;
-            Send send = new Send(Properties.Settings.Default.IP_server, message);
-            Receive receive = new Receive();
-            message = receive.Receives();
-            if (message != "Нет")
+            try
             {
-                ActiveForm.Visible = false;
-                Sections F = new Sections();
-                Properties.Settings.Default.People = message;
-                Properties.Settings.Default.Save();
-                F.Show();
+
+                string message = System.Net.Dns.GetHostByName(System.Net.Dns.GetHostName()).AddressList[0] + "\n1\n" +
+                                 textBox_surname.Text + "\n" + textBox_first_name.Text + "\n" + textBox_last_name.Text +
+                                 "\n" + textBox_password.Text;
+                Send send = new Send(Properties.Settings.Default.IP_server, message);
+                Receive receive = new Receive();
+                message = receive.Receives();
+                if (message != "Нет")
+                {
+                    ActiveForm.Visible = false;
+                    Sections F = new Sections();
+                    Properties.Settings.Default.People = message;
+                    Properties.Settings.Default.Save();
+                    F.Show();
+                }
+                else
+                {
+                    MessageBox.Show("Данный участник не зарегистрирован в базе данных", "Ошибка", MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
             }
-            else
+            catch (Exception)
             {
-                MessageBox.Show("Данный участник не зарегистрирован в базе данных", "Ошибка", MessageBoxButtons.OK,
-                                MessageBoxIcon.Error);
+                DialogResult result =
+                       MessageBox.Show("Внимание! Ошибка при подключении к серверу. Вы хотите изменить IP сервера?",
+                                       "Обновление", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                if (result == DialogResult.Yes)
+                {
+                    panel_settings.Invoke((MethodInvoker)delegate
+                    {
+                        panel_settings.Visible = true;
+                    });
+                    panel_settings.Invoke((MethodInvoker)delegate
+                    {
+                        panel_authorization.Visible = false;
+                    });
+                }
+                else
+                {
+                    Application.Exit();
+                }
             }
         }
     }
